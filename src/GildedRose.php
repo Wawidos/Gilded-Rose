@@ -2,80 +2,26 @@
 
 namespace App;
 
+use App\AgeingStrategies\AgedBrieAgeing;
+use App\AgeingStrategies\BackstagePassAgeing;
+use App\AgeingStrategies\DefaultItemAgeing;
+use App\AgeingStrategies\ItemAgeingInterface;
+use App\AgeingStrategies\SulfurasAgeing;
+
 final class GildedRose
 {
     public function updateQuality(Item $item): void
     {
-        if ($item->name === 'Sulfuras, Hand of Ragnaros') {
-            $item->quality = 80;
-
-            return;
-        }
-
-        if ($item->name === 'Aged Brie') {
-            $this->updateAgedBrie($item);
-
-            return;
-        }
-
-        if ($item->name === 'Backstage passes to a TAFKAL80ETC concert') {
-            $this->updateBackstagePass($item);
-
-            return;
-        }
-
-        $this->updateRegularItem($item);
+        $updater = $this->getUpdaterFor($item);
+        $updater->update($item);
     }
 
-    private function updateAgedBrie(Item $item): void
-    {
-        $this->decrementSellIn($item);
-
-        if ($item->quality < 50) {
-            $item->quality++;
-        }
-
-        if ($item->sell_in < 0 && $item->quality < 50) {
-            $item->quality++;
-        }
-    }
-
-    private function updateBackstagePass(Item $item): void
-    {
-        $this->decrementSellIn($item);
-
-        if ($item->sell_in < 0) {
-            $item->quality = 0;
-
-            return;
-        }
-
-        if ($item->quality < 50) {
-            $item->quality++;
-            if ($item->sell_in < 10 && $item->quality < 50) {
-                $item->quality++;
-            }
-            if ($item->sell_in < 5 && $item->quality < 50) {
-                $item->quality++;
-            }
-        }
-    }
-
-    private function updateRegularItem(Item $item): void
-    {
-        $this->decrementSellIn($item);
-
-        if ($item->quality > 0) {
-            $item->quality--;
-        }
-
-        if ($item->sell_in < 0 && $item->quality > 0) {
-            $item->quality--;
-        }
-    }
-
-    private function decrementSellIn(Item $item): void
-    {
-        $item->sell_in--;
+    private function getUpdaterFor(Item $item): ItemAgeingInterface {
+        return match($item->name) {
+            'Aged Brie' => new AgedBrieAgeing(),
+            'Backstage passes to a TAFKAL80ETC concert' => new BackstagePassAgeing(),
+            'Sulfuras, Hand of Ragnaros' => new SulfurasAgeing(),
+            default => new DefaultItemAgeing(),
+        };
     }
 }
